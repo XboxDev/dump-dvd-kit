@@ -5,6 +5,11 @@ import math
 import usb1
 import struct
 
+REGION_LOOKUP = ["region-free", "North-America", 
+                 "Europe", "Southeast Asia", 
+                 "Latin America", "Africa", 
+                 "China", "MPAA", "International"]
+
 with usb1.USBContext() as context:
 
   vid = 0x045e
@@ -13,15 +18,15 @@ with usb1.USBContext() as context:
 
   handle = context.openByVendorIDAndProductID(vid, pid, skip_on_error=True)
   if handle is None:
-      # Device not present, or user is not allowed to access device.
-    print("oops?!")
+    print("Device not present, or user is not allowed to access the device")
+    sys.exit()
+
 
   rom_info = 1
   info = handle.controlRead(usb1.REQUEST_TYPE_VENDOR | usb1.RECIPIENT_INTERFACE, rom_info, 0, interface, 6)
 
   (version, code_length) = struct.unpack("<HI", info)
   print("Version: %X.%X" % (version >> 8, version & 0xFF))
-  print("Size: " + str(code_length) + " bytes")
 
   with open("dvd-dongle-rom.bin", 'wb') as f:
 
@@ -44,6 +49,7 @@ with usb1.USBContext() as context:
       f.write(data)
       remaining -= chunkSize
       cursor += chunkSize
+    print("Size: "+ str(code_length) + " bytes(written to dvd-dongle-rom.bin)")
 
   # Do some sanity checks and print out DVD region
 
@@ -58,4 +64,6 @@ with usb1.USBContext() as context:
   SizeOfRawData = struct.unpack('I', xbe[SectionHeaders+16:SectionHeaders+20])[0]
   assert(RawData + SizeOfRawData == SizeOfImage)
   GameRegion = struct.unpack('I', xbe[Certificate+160:Certificate+164])[0]
-  print("Region: " + str(GameRegion))
+  print("Region(" + str(GameRegion) + "): " + REGION_LOOKUP[GameRegion])
+
+
